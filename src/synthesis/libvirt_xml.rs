@@ -239,8 +239,9 @@ impl LibvirtXmlSynthesizer {
         // Network (VirtIO)
         xml.push_str("    <interface type='network'>\n      <source network='default'/>\n      <model type='virtio'/>\n    </interface>\n");
 
-        // Sound (PipeWire / Intel HDA)
-        xml.push_str("    <sound model='ich9-intel-hda'>\n      <audio id='1' type='pipewire'/>\n    </sound>\n");
+        // Sound (PipeWire / Intel HDA ich9)
+        xml.push_str("    <sound model='ich9'>\n      <audio id='1'/>\n    </sound>\n");
+        xml.push_str("    <audio id='1' type='pipewire'/>\n");
 
         // VirtioFS Shared Directory
         if let Some(shared_dir) = &config.shared_directory {
