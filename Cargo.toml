@@ -1,0 +1,40 @@
+[package]
+name = "clerestory"
+version = "0.1.0"
+edition = "2021"
+authors = ["Ritesh <developer@clerestory.dev>"]
+description = "Hardware-Adaptive Windows 11 KVM Optimizer & Provisioning Engine"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# CLI & Terminal Interface
+clap = { version = "4.5", features = ["derive", "cargo", "env", "string"] }
+clap_complete = "4.5"
+clap_mangen = "0.2"
+ratatui = "0.29"
+crossterm = "0.28"
+indicatif = "0.17"
+colored = "2.1"
+console = "0.15"
+
+# Hardware Introspection & System
+sysinfo = "0.33"
+nix = { version = "0.29", features = ["fs", "process", "signal", "user"] }
+
+# In-Memory Virtual Disk & ISO
+fatfs = "0.3"
+tempfile = "3.14"
+
+# XML Generation & Serialization
+quick-xml = { version = "0.37", features = ["serialize"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Error Handling & Diagnostics
+thiserror = "2.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
