@@ -89,30 +89,67 @@ impl UiRenderer {
         match state.current_tab {
             0 => {
                 // Doctor & CPU specs
+                let invtsc_span = if report.cpu.has_invtsc {
+                    Span::styled("Detected (invtsc)", Style::default().fg(Color::Green))
+                } else {
+                    Span::styled("Not detected", Style::default().fg(Color::Yellow))
+                };
+
+                let virt_span = if report.cpu.has_svm_or_vmx {
+                    Span::styled(
+                        "Active (Hardware Virt Ready)",
+                        Style::default().fg(Color::Green),
+                    )
+                } else {
+                    Span::styled("Missing (Check BIOS)", Style::default().fg(Color::Red))
+                };
+
+                let kvm_span = if report.security.has_kvm_device {
+                    Span::styled("Present (/dev/kvm)", Style::default().fg(Color::Green))
+                } else {
+                    Span::styled("Missing (/dev/kvm)", Style::default().fg(Color::Red))
+                };
+
+                let swtpm_span = if report.security.swtpm_bin.is_some() {
+                    Span::styled("Present (TPM 2.0)", Style::default().fg(Color::Green))
+                } else {
+                    Span::styled("Missing (swtpm)", Style::default().fg(Color::Yellow))
+                };
+
                 let lines = vec![
                     Line::from(vec![
                         Span::styled("CPU Model: ", Style::default().fg(Color::Yellow)),
                         Span::raw(&report.cpu.model_name),
                     ]),
                     Line::from(vec![
-                        Span::styled("Sockets: ", Style::default().fg(Color::Yellow)),
-                        Span::raw(report.cpu.sockets.to_string()),
+                        Span::styled("Vendor / Sockets: ", Style::default().fg(Color::Yellow)),
+                        Span::raw(format!(
+                            "{} ({} Sockets)",
+                            report.cpu.vendor, report.cpu.sockets
+                        )),
                     ]),
                     Line::from(vec![
-                        Span::styled("Physical Cores: ", Style::default().fg(Color::Yellow)),
-                        Span::raw(report.cpu.total_physical_cores.to_string()),
-                    ]),
-                    Line::from(vec![
-                        Span::styled("SMT Threads: ", Style::default().fg(Color::Yellow)),
-                        Span::raw(report.cpu.total_threads.to_string()),
+                        Span::styled("Cores / Threads: ", Style::default().fg(Color::Yellow)),
+                        Span::raw(format!(
+                            "{} Physical / {} Threads",
+                            report.cpu.total_physical_cores, report.cpu.total_threads
+                        )),
                     ]),
                     Line::from(vec![
                         Span::styled("Invariant TSC: ", Style::default().fg(Color::Yellow)),
-                        Span::styled("Detected (invtsc)", Style::default().fg(Color::Green)),
+                        invtsc_span,
                     ]),
                     Line::from(vec![
                         Span::styled("Hardware Virt: ", Style::default().fg(Color::Yellow)),
-                        Span::styled("Active (KVM Ready)", Style::default().fg(Color::Green)),
+                        virt_span,
+                    ]),
+                    Line::from(vec![
+                        Span::styled("KVM Hypervisor: ", Style::default().fg(Color::Yellow)),
+                        kvm_span,
+                    ]),
+                    Line::from(vec![
+                        Span::styled("TPM 2.0 (swtpm): ", Style::default().fg(Color::Yellow)),
+                        swtpm_span,
                     ]),
                 ];
 
@@ -122,23 +159,41 @@ impl UiRenderer {
                 let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
                 f.render_widget(paragraph, body_chunks[0]);
 
-                let rec_lines = vec![
-                    Line::from(Span::styled(
-                        "Optimal Windows 11 Profile:",
-                        Style::default()
-                            .fg(Color::Cyan)
-                            .add_modifier(Modifier::BOLD),
-                    )),
-                    Line::from("• Allocate 8 Cores / 16 Threads"),
-                    Line::from("• Lock execution strictly to CCD0"),
-                    Line::from("• Enable all 12 Hyper-V enlightenments"),
-                    Line::from("• Use VirtIO-SCSI with io_uring and TRIM"),
-                    Line::from("• Use native PipeWire audio (10.6ms latency)"),
-                ];
+                let mut rec_lines = vec![Line::from(Span::styled(
+                    "Synthesis Directives:",
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ))];
+
+                if report.cpu.is_hybrid {
+                    rec_lines.push(Line::from(
+                        "• Intel Hybrid detected: Pinning strictly to P-Cores",
+                    ));
+                } else if report.cpu.cache_domains.len() > 1 {
+                    rec_lines.push(Line::from(
+                        "• Multi-CCD AMD detected: Locking execution to CCD0",
+                    ));
+                } else {
+                    rec_lines.push(Line::from(
+                        "• Standard topology: Locking cores with SMT pairs",
+                    ));
+                }
+
+                rec_lines.push(Line::from("• Invariant TSC + 12 Hyper-V enlightenments"));
+                if report.storage.supports_io_uring {
+                    rec_lines.push(Line::from("• VirtIO-SCSI with io_uring + TRIM unmap"));
+                } else {
+                    rec_lines.push(Line::from("• VirtIO-SCSI with Native AIO"));
+                }
+
+                if report.audio.is_pipewire {
+                    rec_lines.push(Line::from("• Native PipeWire audio backend (10.6ms)"));
+                }
 
                 let block_rec = Block::default()
                     .borders(Borders::ALL)
-                    .title(" Recommendation Engine ");
+                    .title(" Optimizer Engine ");
                 let p_rec = Paragraph::new(rec_lines).block(block_rec);
                 f.render_widget(p_rec, body_chunks[1]);
             }
