@@ -1,0 +1,9 @@
+pub mod cli;
+pub mod error;
+pub mod exit_codes;
+pub mod model;
+pub mod optimizer;
+pub mod probe;
+pub mod slipstream;
+pub mod synthesis;
+pub mod tui;
